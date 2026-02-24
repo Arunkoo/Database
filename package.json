@@ -11,5 +11,9 @@
   "license": "ISC",
   "devDependencies": {
     "dbmate": "^2.31.0"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
+    "dotenv": "^17.3.1"
   }
 }

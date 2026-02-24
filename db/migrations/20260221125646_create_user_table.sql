@@ -18,11 +18,11 @@ CREATE TYPE task_status AS ENUM (
   'cancelled'
 );
 
- CREATE TYPE task_priority AS ENUM(
+CREATE TYPE task_priority AS ENUM(
   'low',
   'medium',
   'high'
- )
+);
 -- Member role (role of a user in a project)
 CREATE TYPE member_role AS ENUM (
   'owner',
@@ -98,4 +98,15 @@ CREATE TABLE project_members (
   PRIMARY KEY (project_id, user_id)
 );
 -- migrate:down
+
+DROP TABLE IF EXISTS project_members
+DROP TABLE IF EXISTS tasks
+DROP TABLE IF EXISTS projects
+DROP TABLE IF EXISTS user_profiles
+DROP TABLE IF EXISTS users
+
+DROP TYPE IF EXISTS project_status
+DROP TYPE IF EXISTS task_status
+DROP TYPE IF EXISTS task_priority
+DROP TYPE IF EXISTS member_role
 
