@@ -113,6 +113,30 @@ CREATE TABLE task_comments (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE activity_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  project_id UUID
+    REFERENCES projects(id)
+    ON DELETE CASCADE,
+
+  task_id UUID
+    REFERENCES tasks(id)
+    ON DELETE CASCADE,
+
+  user_id UUID NOT NULL
+    REFERENCES users(id)
+    ON DELETE CASCADE,
+
+  action TEXT NOT NULL, 
+  -- e.g. 'TASK_CREATED', 'STATUS_UPDATED', 'COMMENT_ADDED', 'MEMBER_ADDED'
+
+  metadata JSONB, 
+  -- optional extra info like { "old_status": "pending", "new_status": "completed" }
+
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
 -- migrate:down
 
 -- migrate:down
@@ -127,3 +151,4 @@ DROP TYPE IF EXISTS project_status;
 DROP TYPE IF EXISTS task_status;
 DROP TYPE IF EXISTS task_priority;
 DROP TYPE IF EXISTS member_role;
+DROP TABLE IF EXISTS activity_logs;
