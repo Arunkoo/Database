@@ -30,6 +30,28 @@ CREATE TYPE member_role AS ENUM (
   'member',
   'viewer'
 );
+CREATE TYPE activity_action AS ENUM (
+  'TASK_CREATED',
+  'TASK_UPDATED',
+  'STATUS_UPDATED',
+  'COMMENT_ADDED',
+  'MEMBER_ADDED'
+);
+
+CREATE TABLE activity_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+  task_id UUID REFERENCES tasks(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  action activity_action NOT NULL,
+  metadata JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_activity_logs_project_id ON activity_logs (project_id);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_task_id ON activity_logs (task_id);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON activity_logs (user_id);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON activity_logs (created_at);
 
 -- users tabble
 CREATE TABLE users (
@@ -116,25 +138,11 @@ CREATE TABLE task_comments (
 
 CREATE TABLE activity_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-
-  project_id UUID
-    REFERENCES projects(id)
-    ON DELETE CASCADE,
-
-  task_id UUID
-    REFERENCES tasks(id)
-    ON DELETE CASCADE,
-
-  user_id UUID NOT NULL
-    REFERENCES users(id)
-    ON DELETE CASCADE,
-
-  action TEXT NOT NULL, 
-  -- e.g. 'TASK_CREATED', 'STATUS_UPDATED', 'COMMENT_ADDED', 'MEMBER_ADDED'
-
-  metadata JSONB, 
-  -- optional extra info like { "old_status": "pending", "new_status": "completed" }
-
+  project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+  task_id UUID REFERENCES tasks(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  action activity_action NOT NULL,
+  metadata JSONB DEFAULT '{}'::jsonb,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 -- migrate:down
