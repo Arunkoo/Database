@@ -18,11 +18,12 @@ CREATE TYPE task_status AS ENUM (
   'cancelled'
 );
 
-CREATE TYPE task_priority AS ENUM(
+CREATE TYPE task_priority AS ENUM (
   'low',
   'medium',
   'high'
 );
+
 -- Member role (role of a user in a project)
 CREATE TYPE member_role AS ENUM (
   'owner',
@@ -30,35 +31,13 @@ CREATE TYPE member_role AS ENUM (
   'member',
   'viewer'
 );
-CREATE TYPE activity_action AS ENUM (
-  'TASK_CREATED',
-  'TASK_UPDATED',
-  'STATUS_UPDATED',
-  'COMMENT_ADDED',
-  'MEMBER_ADDED'
-);
 
-CREATE TABLE activity_logs (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
-  task_id UUID REFERENCES tasks(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  action activity_action NOT NULL,
-  metadata JSONB DEFAULT '{}'::jsonb,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_activity_logs_project_id ON activity_logs (project_id);
-CREATE INDEX IF NOT EXISTS idx_activity_logs_task_id ON activity_logs (task_id);
-CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON activity_logs (user_id);
-CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON activity_logs (created_at);
-
--- users tabble
+-- users table
 CREATE TABLE users (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email         TEXT NOT NULL UNIQUE,
   full_name     TEXT NOT NULL,
-  password_hash TEXT NOT NULL,             
+  password_hash TEXT NOT NULL,
   is_active     BOOLEAN NOT NULL DEFAULT TRUE,
   created_at    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -69,7 +48,7 @@ CREATE TABLE user_profiles (
   full_name    TEXT,
   bio          TEXT,
   avatar_url   TEXT,
-  timezone     TEXT,                        -- e.g. 'Asia/Kolkata'
+  timezone     TEXT,
   created_at   TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at   TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -79,18 +58,15 @@ CREATE TABLE projects (
   name TEXT NOT NULL,
   description TEXT,
   status project_status NOT NULL DEFAULT 'active',
-  owner_id UUID NOT NULL REFERENCES users ON DELETE RESTRICT,
+  owner_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- one to many with projects..
+-- one to many with projects
 CREATE TABLE tasks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-
-  project_id UUID NOT NULL
-    REFERENCES projects
-    ON DELETE CASCADE,
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
 
   title TEXT NOT NULL,
   description TEXT,
@@ -98,37 +74,28 @@ CREATE TABLE tasks (
   status task_status NOT NULL DEFAULT 'in_progress',
   priority task_priority NOT NULL DEFAULT 'low',
   due_date DATE,
-  assigned_to UUID REFERENCES users ON DELETE SET NULL,
+  assigned_to UUID REFERENCES users(id) ON DELETE SET NULL,
+
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE project_members (
-
-  project_id UUID NOT NULL
-    REFERENCES projects
-    ON DELETE CASCADE,
-
-  user_id UUID NOT NULL
-    REFERENCES users
-    ON DELETE CASCADE,
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 
   role member_role NOT NULL DEFAULT 'member',
 
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+
   PRIMARY KEY (project_id, user_id)
 );
+
 CREATE TABLE task_comments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-
-  task_id UUID NOT NULL
-    REFERENCES tasks(id)
-    ON DELETE CASCADE,
-
-  user_id UUID NOT NULL
-    REFERENCES users(id)
-    ON DELETE CASCADE,
+  task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 
   content TEXT NOT NULL,
 
@@ -136,18 +103,28 @@ CREATE TABLE task_comments (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- ✅ activity logs (NO ENUM)
+-- action is a free-form text (you can enforce values at app-layer)
 CREATE TABLE activity_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
   task_id UUID REFERENCES tasks(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  action activity_action NOT NULL,
-  metadata JSONB DEFAULT '{}'::jsonb,
+
+  action TEXT NOT NULL,                      -- e.g. 'TASK_CREATED'
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
--- migrate:down
+
+CREATE INDEX IF NOT EXISTS idx_activity_logs_project_id ON activity_logs (project_id);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_task_id ON activity_logs (task_id);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON activity_logs (user_id);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON activity_logs (created_at);
 
 -- migrate:down
+
+DROP TABLE IF EXISTS activity_logs;
 DROP TABLE IF EXISTS task_comments;
 DROP TABLE IF EXISTS project_members;
 DROP TABLE IF EXISTS tasks;
@@ -155,8 +132,7 @@ DROP TABLE IF EXISTS projects;
 DROP TABLE IF EXISTS user_profiles;
 DROP TABLE IF EXISTS users;
 
-DROP TYPE IF EXISTS project_status;
-DROP TYPE IF EXISTS task_status;
-DROP TYPE IF EXISTS task_priority;
 DROP TYPE IF EXISTS member_role;
-DROP TABLE IF EXISTS activity_logs;
+DROP TYPE IF EXISTS task_priority;
+DROP TYPE IF EXISTS task_status;
+DROP TYPE IF EXISTS project_status;
