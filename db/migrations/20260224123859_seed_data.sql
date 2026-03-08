@@ -1,5 +1,8 @@
 -- migrate:up
--- Seed data (users, profiles, projects, members, tasks, comments, activity)
+
+-- ============================================================================
+-- SEED DATA (realistic demo data)
+-- ============================================================================
 
 WITH upserted_users AS (
   INSERT INTO users (email, full_name, password_hash, is_active)
@@ -74,7 +77,6 @@ inserted_projects AS (
   RETURNING id, name
 ),
 
--- Ensure we can reference projects even if they already existed
 all_projects AS (
   SELECT id, name FROM inserted_projects
   UNION ALL
@@ -150,7 +152,6 @@ inserted_comments AS (
     c.content
   FROM inserted_tasks it
   JOIN tasks tk ON tk.id = it.id
-  JOIN all_projects p ON p.id = tk.project_id
   JOIN upserted_users cu ON cu.email = c.commenter_email
   JOIN (
     VALUES
@@ -168,7 +169,7 @@ SELECT
   tk.project_id,
   tk.id,
   tk.assigned_to,
-  'TASK_CREATED'::activity_action,
+  'TASK_CREATED',
   jsonb_build_object(
     'title', tk.title,
     'priority', tk.priority,
@@ -179,7 +180,7 @@ FROM inserted_tasks it
 JOIN tasks tk ON tk.id = it.id;
 
 -- migrate:down
--- (Down seeds usually TRUNCATE, but be careful in shared envs.)
+
 TRUNCATE TABLE activity_logs CASCADE;
 TRUNCATE TABLE task_comments CASCADE;
 TRUNCATE TABLE project_members CASCADE;
